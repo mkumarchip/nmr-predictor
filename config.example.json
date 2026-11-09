@@ -1,0 +1,52 @@
+{
+  "models": {
+    "csp5": {
+      "enabled": true,
+      "label": "CSP5",
+      "nuclei": [
+        "C",
+        "H"
+      ],
+      "python": "/path/to/envs/csp5/bin/python",
+      "cwd": "/path/to/csp5",
+      "script": "runners/run_csp5.py",
+      "color": "#1F9E52"
+    },
+    "cascade": {
+      "enabled": true,
+      "label": "CASCADE-2.0",
+      "nuclei": [
+        "C"
+      ],
+      "python": "/path/to/envs/cascade/bin/python",
+      "cwd": "/path/to/CASCADE-2.0",
+      "script": "runners/run_cascade.py",
+      "color": "#D97706"
+    },
+    "nmrnet": {
+      "enabled": true,
+      "label": "NMRNet",
+      "nuclei": [
+        "C",
+        "H"
+      ],
+      "python": "/path/to/envs/nmrnet/bin/python",
+      "cwd": "/path/to/NMRNet",
+      "script": "runners/run_nmrnet.py",
+      "color": "#2563EB"
+    },
+    "fullsspruce": {
+      "enabled": true,
+      "label": "FullSSPrUCe",
+      "nuclei": [
+        "H"
+      ],
+      "couplings": true,
+      "python": "/path/to/envs/fullsspruce/bin/python",
+      "cwd": "/path/to/fullsspruce",
+      "script": "runners/run_fullsspruce.py",
+      "color": "#7C3AED"
+    }
+  },
+  "timeout_seconds": 180
+}

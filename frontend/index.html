@@ -1,0 +1,2205 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NMR Predictor v3</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #FFFFFF;
+      --panel: #F7F8F7;
+      --panel-2: #EEF1EE;
+      --border: #E5E7EB;
+      --text: #1A1A1A;
+      --muted: #6B7280;
+      --accent: #1F9E52;
+      --accent-hover: #17833F;
+      --accent-weak: #E7F4EC;
+      --ink: var(--text);
+      --line: var(--border);
+      --good: var(--accent);
+      --bad: #DC2626;
+      --warn: #D97706;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    main {
+      width: min(1680px, 100%);
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(25px, 3vw, 40px);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    h2, h3 {
+      margin: 0;
+      letter-spacing: 0;
+    }
+
+    h2 { font-size: 16px; }
+    h3 { font-size: 13px; color: var(--muted); text-transform: uppercase; }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .status {
+      min-height: 22px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: right;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(360px, 0.92fr) minmax(520px, 1.4fr);
+      gap: 16px;
+      padding-top: 16px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 46px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+
+    .panel-body {
+      padding: 14px;
+    }
+
+    .input-tabs {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    button, input, textarea, select {
+      font: inherit;
+      color: var(--ink);
+    }
+
+    button {
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #FFFFFF;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    button:hover:not(:disabled) { background: var(--accent-weak); border-color: var(--accent); color: var(--accent); }
+    button.active { background: var(--accent-weak); border-color: var(--accent); color: var(--accent); }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #FFFFFF; }
+    button.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); color: #FFFFFF; }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+
+    input, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #FFFFFF;
+      padding: 10px;
+      outline: none;
+    }
+
+    textarea { min-height: 130px; resize: vertical; }
+    input:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(31, 158, 82, .16); }
+
+    .row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .examples {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .examples button {
+      height: 28px;
+      padding: 0 9px;
+      color: var(--muted);
+      background: #FFFFFF;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+
+
+    .structure-box {
+      min-height: 284px;
+      display: grid;
+      place-items: center;
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .structure-box svg {
+      width: 100%;
+      height: auto;
+      max-height: 320px;
+    }
+
+    .structure-meta {
+      display: grid;
+      gap: 5px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      word-break: break-all;
+    }
+
+    .model-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    label.model {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px 9px;
+      background: #FFFFFF;
+      font-size: 13px;
+    }
+
+    label.model:has(input:checked) {
+      background: var(--accent-weak);
+      border-color: var(--accent);
+    }
+
+    label.model input[type="checkbox"] {
+      accent-color: var(--accent);
+    }
+
+    label.model.off {
+      opacity: .52;
+    }
+
+    .swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, .9), 0 0 0 3px currentColor;
+      flex: 0 0 auto;
+    }
+
+    .predict-row {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .viewer-tabs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .viewer-tabs button {
+      width: 58px;
+    }
+
+    .viewer-toolbar {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #FFFFFF;
+    }
+
+    .zoom-tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .zoom-tools button {
+      min-width: 42px;
+      height: 30px;
+      padding: 0 9px;
+      font-size: 12px;
+    }
+
+    .trace-controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .trace-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 30px;
+      padding: 4px 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #FFFFFF;
+      font-size: 12px;
+    }
+
+    .trace-chip input {
+      width: auto;
+      accent-color: var(--accent);
+    }
+
+    .trace-chip.hidden {
+      opacity: .52;
+      background: var(--panel);
+    }
+
+    .trace-chip.disabled {
+      color: var(--muted);
+      cursor: help;
+      opacity: .66;
+    }
+
+    .trace-label {
+      border: 0;
+      background: transparent;
+      padding: 0;
+      height: auto;
+      color: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .trace-label:hover {
+      color: var(--accent);
+      background: transparent;
+    }
+
+    canvas {
+      width: 100%;
+      height: 460px;
+      display: block;
+      background: #FFFFFF;
+      cursor: crosshair;
+    }
+
+    canvas.mode-horizontal { cursor: ew-resize; }
+    canvas.mode-vertical { cursor: ns-resize; }
+    canvas.mode-box { cursor: crosshair; }
+    canvas.pan-cursor { cursor: grab; }
+
+    .viewer-help {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .legend-chip, .error-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 28px;
+      padding: 4px 9px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #FFFFFF;
+      font-size: 12px;
+    }
+
+    .error-chip {
+      color: var(--bad);
+      border-color: rgba(220, 38, 38, .35);
+      background: #FEF2F2;
+    }
+
+    .readout {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      padding: 12px 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .readout-card {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px;
+      background: #FFFFFF;
+      min-height: 72px;
+    }
+
+    .peak-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+
+    .peak-table th, .peak-table td {
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid rgba(229, 231, 235, .9);
+      padding: 6px;
+    }
+
+    .chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .peak-chip {
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      padding: 3px 6px;
+      white-space: nowrap;
+      background: #FFFFFF;
+    }
+
+    .peak-chip.atom-active {
+      background: var(--accent-weak);
+      border-color: var(--accent) !important;
+      color: var(--accent);
+    }
+
+    .structure-box svg .atom-linked {
+      fill: var(--accent) !important;
+      stroke: var(--accent) !important;
+      stroke-width: 4px !important;
+    }
+
+    .structure-box svg .disagreement-low { stroke: var(--accent) !important; }
+    .structure-box svg .disagreement-moderate { stroke: var(--warn) !important; }
+    .structure-box svg .disagreement-high { stroke: var(--bad) !important; }
+    .structure-box svg .disagreement-moderate.note { fill: var(--warn) !important; }
+    .structure-box svg .disagreement-high.note { fill: var(--bad) !important; }
+
+    .field-label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .experimental-grid {
+      display: grid;
+      grid-template-columns: 90px minmax(0, 1fr);
+      gap: 8px;
+      align-items: end;
+    }
+
+    select {
+      width: 100%;
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #FFFFFF;
+      padding: 0 9px;
+      outline: none;
+    }
+
+    select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(31, 158, 82, .16); }
+
+    .compact-textarea { min-height: 92px; }
+    .import-note { margin-top: 8px; color: var(--warn); font-size: 12px; }
+
+    .ranking-table, .assignment-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .ranking-table th, .ranking-table td,
+    .assignment-table th, .assignment-table td {
+      padding: 7px 8px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    .ranking-table tr.best { background: var(--accent-weak); color: var(--accent-hover); font-weight: 700; }
+    .assignment-wrap { overflow: auto; max-height: 430px; }
+    .assignment-table th { position: sticky; top: 0; background: var(--panel); z-index: 1; }
+    .assignment-table th button { height: auto; border: 0; padding: 0; background: transparent; }
+    .assignment-table tbody tr { cursor: pointer; background: #FFFFFF; }
+    .assignment-table tbody tr:hover, .assignment-table tbody tr.selected { background: var(--accent-weak); }
+
+    .export-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+    .export-tools button { height: 30px; padding: 0 9px; font-size: 12px; }
+
+    .hsqc-readout {
+      position: absolute;
+      pointer-events: none;
+      padding: 6px 8px;
+      border: 1px solid var(--accent);
+      border-radius: 5px;
+      background: rgba(255,255,255,.96);
+      color: var(--text);
+      font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .structure-box svg [class*="atom-"] {
+      cursor: pointer;
+    }
+
+    .structure-box svg .note {
+      pointer-events: none;
+    }
+
+    @media (max-width: 980px) {
+      main { padding: 12px; }
+      header { display: block; }
+      .status { text-align: left; margin-top: 8px; }
+      .layout { grid-template-columns: 1fr; }
+      .readout { grid-template-columns: 1fr; }
+      .viewer-toolbar { grid-template-columns: 1fr; }
+      .trace-controls { justify-content: flex-start; }
+      canvas { height: 360px; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>NMR Predictor v3</h1>
+      <p class="subtitle">consensus assignments, experimental comparison, and 1D/2D simulation</p>
+    </div>
+    <div id="status" class="status mono">ready</div>
+  </header>
+
+  <section class="layout">
+    <div class="left">
+      <article class="panel">
+        <div class="panel-head">
+          <h2>Molecule Input</h2>
+          <span class="mono viewer-help">RDKit</span>
+        </div>
+        <div class="panel-body">
+          <div class="input-tabs" id="inputTabs"></div>
+          <div id="inputPane"></div>
+        </div>
+      </article>
+
+      <article class="panel" style="margin-top:16px">
+        <div class="panel-head">
+          <h2>Confirmed Structure</h2>
+          <span id="atomCount" class="mono viewer-help"></span>
+        </div>
+        <div class="panel-body">
+          <div class="structure-box" id="structureBox"><span class="mono" style="color:#66727e">submit a molecule</span></div>
+          <div class="structure-meta mono">
+            <div id="confirmedSmiles">SMILES: none</div>
+            <div id="structureSource">source: none</div>
+            <div>disagreement: <span style="color:var(--accent)">low</span> / <span style="color:var(--warn)">moderate</span> / <span style="color:var(--bad)">high</span></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel" style="margin-top:16px">
+        <div class="panel-head">
+          <h2>Predict With</h2>
+          <span class="mono viewer-help">enabled models default on</span>
+        </div>
+        <div class="panel-body">
+          <div class="model-grid" id="modelGrid"></div>
+          <div class="predict-row">
+            <div class="mono viewer-help" id="selectionHint">confirm a molecule before predicting</div>
+            <button id="predictButton" class="primary" disabled>Predict</button>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel" style="margin-top:16px">
+        <div class="panel-head">
+          <h2>Experimental Overlay</h2>
+          <span class="mono viewer-help">auto-detect lab formats</span>
+        </div>
+        <div class="panel-body">
+          <div class="experimental-grid">
+            <label><span class="field-label">Nucleus</span><select id="experimentalNucleus"><option value="AUTO">Auto</option><option value="H">1H</option><option value="C">13C</option></select></label>
+            <label><span class="field-label">Upload report / spectrum</span><input id="experimentalFile" type="file" accept=".txt,.csv,.dx,.jdx,.jdf,.mnova"></label>
+          </div>
+          <div style="height:8px"></div>
+          <textarea id="experimentalText" class="mono compact-textarea" placeholder="1H NMR (400 MHz, CDCl3) δ 7.26 (d, J = 7.1 Hz, 2H), 1.20 (t, J = 7.1 Hz, 3H)"></textarea>
+          <div class="row" style="margin-top:8px">
+            <span id="experimentalStatus" class="mono viewer-help">no experimental data loaded</span>
+            <button id="loadExperimental" class="primary">Overlay</button>
+          </div>
+          <div id="experimentalNote" class="mono import-note" hidden></div>
+        </div>
+      </article>
+    </div>
+
+    <div class="right">
+      <article class="panel">
+        <div class="panel-head">
+          <div class="viewer-tabs">
+            <button data-nucleus="H" class="active">&#185;H</button>
+            <button data-nucleus="C">&#185;&#179;C</button>
+            <button data-nucleus="HSQC" style="width:auto;padding:0 10px">2D HSQC</button>
+          </div>
+          <div class="mono viewer-help">wheel zoom, drag pan, click peak, shift-drag integrate</div>
+        </div>
+        <div class="viewer-toolbar">
+          <div class="zoom-tools" id="zoomTools">
+            <button data-zoom-mode="horizontal" class="active" title="Drag a ppm range">Horizontal</button>
+            <button data-zoom-mode="vertical" title="Drag an intensity range">Vertical</button>
+            <button data-zoom-mode="box" title="Drag a box to zoom x and y">Box</button>
+            <button id="resetZoom" title="Reset ppm and intensity view">Reset</button>
+          </div>
+          <div class="trace-controls" id="traceControls"></div>
+        </div>
+        <canvas id="spectrumCanvas"></canvas>
+        <div class="legend" id="legend" hidden></div>
+        <div class="readout">
+          <div class="readout-card">
+            <h3>Peak Pick</h3>
+            <div id="peakReadout" class="mono viewer-help">click near a peak</div>
+          </div>
+          <div class="readout-card">
+            <h3>Integration</h3>
+            <div id="integrationReadout" class="mono viewer-help">shift-drag across a region</div>
+          </div>
+        </div>
+        <div class="panel-body" id="peakTables"></div>
+      </article>
+
+      <article class="panel" style="margin-top:16px">
+        <div class="panel-head">
+          <h2>Model Fit vs Experiment</h2>
+          <span class="mono viewer-help">nearest-neighbour peak matching</span>
+        </div>
+        <div class="panel-body" id="maeTable"><span class="mono viewer-help">load an experimental peak list to compare</span></div>
+      </article>
+
+      <article class="panel" style="margin-top:16px">
+        <div class="panel-head">
+          <h2>Assignments</h2>
+          <div class="export-tools">
+            <button data-export="json">JSON</button>
+            <button data-export="assignments">Assignments CSV</button>
+            <button data-export="peaks">Peak CSV</button>
+            <button data-export="png">Spectrum PNG</button>
+            <button data-export="svg">Spectrum SVG</button>
+          </div>
+        </div>
+        <div class="panel-body assignment-wrap" id="assignmentTable"><span class="mono viewer-help">predict a molecule to populate assignments</span></div>
+      </article>
+    </div>
+  </section>
+</main>
+
+<script>
+const examples = [
+  ["ethanol", "CCO"],
+  ["acetic acid", "CC(=O)O"],
+  ["benzene", "c1ccccc1"],
+  ["aspirin", "CC(=O)Oc1ccccc1C(=O)O"],
+  ["ibuprofen", "CC(C)Cc1ccc(cc1)C(C)C(=O)O"]
+];
+
+const state = {
+  tab: "smiles",
+  models: [],
+  selectedModels: new Set(),
+  structure: null,
+  prediction: null,
+  nucleus: "H",
+  viewport: {
+    H: { min: -1, max: 13 },
+    C: { min: -10, max: 220 }
+  },
+  yview: {
+    H: { min: 0, max: 1.05 },
+    C: { min: 0, max: 1.05 }
+  },
+  hsqcView: { hMin: -1, hMax: 13, cMin: -10, cMax: 220 },
+  traceVisible: { H: {}, C: {} },
+  solo: { H: null, C: null },
+  zoomMode: "horizontal",
+  spaceDown: false,
+  dragging: null,
+  hoverPeak: null,
+  pinnedPeak: null,
+  hoverAtoms: [],
+  pinnedAtoms: [],
+  pick: null,
+  integration: null,
+  experimental: { H: null, C: null },
+  experimentalVisible: { H: true, C: true },
+  experimentalFilename: "",
+  experimentalBase64: null,
+  assignmentSort: { key: "atom_index", direction: 1 },
+  selectedAssignment: null,
+  hoverHsqc: null,
+  pinnedHsqc: null
+};
+
+const $ = (id) => document.getElementById(id);
+const statusEl = $("status");
+const canvas = $("spectrumCanvas");
+const ctx = canvas.getContext("2d");
+
+function setStatus(text, bad = false) {
+  statusEl.textContent = text;
+  statusEl.style.color = bad ? "var(--bad)" : "var(--muted)";
+}
+
+function activeWindow() {
+  return state.viewport[state.nucleus];
+}
+
+function activeYWindow() {
+  return state.yview[state.nucleus];
+}
+
+function plotMetrics(width, height) {
+  const left = 52, right = 18, top = 18, bottom = 42;
+  return {
+    left,
+    right,
+    top,
+    bottom,
+    plotW: Math.max(10, width - left - right),
+    plotH: Math.max(10, height - top - bottom),
+    baseY: height - bottom
+  };
+}
+
+function ppmToX(ppm, left, width) {
+  const win = activeWindow();
+  return left + ((win.max - ppm) / (win.max - win.min)) * width;
+}
+
+function xToPpm(x, left, width) {
+  const win = activeWindow();
+  return win.max - ((x - left) / width) * (win.max - win.min);
+}
+
+function intensityToY(value, top, plotH, baseY) {
+  const ywin = activeYWindow();
+  return baseY - ((value - ywin.min) / (ywin.max - ywin.min)) * plotH * 0.88;
+}
+
+function yToIntensity(y, top, plotH, baseY) {
+  const ywin = activeYWindow();
+  return ywin.min + ((baseY - y) / (plotH * 0.88)) * (ywin.max - ywin.min);
+}
+
+function formatPpm(value) {
+  return Number(value).toFixed(Math.abs(value) < 20 ? 3 : 2);
+}
+
+function formatJ(values) {
+  if (!values || !values.length) return "";
+  return values.map((v) => Number(v).toFixed(1)).join(", ");
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;"
+  }[ch]));
+}
+
+function atomLabel(element, atoms) {
+  return `${element}${atoms.join(",")}`;
+}
+
+function activeAtoms() {
+  const hsqc = activeHsqcPeak?.() || null;
+  const atoms = [
+    ...state.hoverAtoms,
+    ...state.pinnedAtoms,
+    ...(state.hoverPeak?.atoms || []),
+    ...(state.pinnedPeak?.atoms || []),
+    ...(hsqc ? [hsqc.c_atom, ...(hsqc.h_atoms || [])] : [])
+  ];
+  return [...new Set(atoms.map(Number).filter((n) => Number.isFinite(n)))];
+}
+
+function visibleForCurrentNucleus(key) {
+  const visible = state.traceVisible[state.nucleus] || {};
+  return visible[key] !== false;
+}
+
+function setTraceVisibility(key, checked) {
+  state.traceVisible[state.nucleus][key] = checked;
+  state.solo[state.nucleus] = null;
+  state.hoverPeak = null;
+  state.pinnedPeak = null;
+  drawViewer();
+}
+
+function toggleSolo(key) {
+  const spectra = state.prediction?.simulations?.[state.nucleus] || {};
+  if (state.solo[state.nucleus] === key) {
+    Object.keys(spectra).forEach((modelKey) => {
+      state.traceVisible[state.nucleus][modelKey] = true;
+    });
+    state.solo[state.nucleus] = null;
+  } else {
+    Object.keys(spectra).forEach((modelKey) => {
+      state.traceVisible[state.nucleus][modelKey] = modelKey === key;
+    });
+    state.solo[state.nucleus] = key;
+  }
+  state.hoverPeak = null;
+  state.pinnedPeak = null;
+  drawViewer();
+}
+
+function initializeTraceVisibility(prediction) {
+  state.traceVisible = { H: {}, C: {} };
+  state.solo = { H: null, C: null };
+  for (const nucleus of ["H", "C"]) {
+    Object.keys(prediction?.simulations?.[nucleus] || {}).forEach((key) => {
+      state.traceVisible[nucleus][key] = true;
+    });
+  }
+}
+
+function shiftSources(nucleus = state.nucleus) {
+  if (!state.prediction || !["H", "C"].includes(nucleus)) return {};
+  const sources = { ...(state.prediction.spectra?.[nucleus] || {}) };
+  const consensusRows = state.prediction.consensus?.[nucleus] || [];
+  if (consensusRows.length) {
+    const templates = {};
+    for (const key of ["fullsspruce", "csp5", "nmrnet", "cascade", ...Object.keys(sources)]) {
+      (sources[key]?.shifts || []).forEach((shift) => {
+        if (templates[shift.atom_index] === undefined) templates[shift.atom_index] = shift;
+      });
+    }
+    sources.consensus = {
+      label: "Consensus",
+      color: "#1A1A1A",
+      shifts: consensusRows.map((row) => ({
+        ...(templates[row.atom_index] || {}),
+        element: nucleus,
+        atom_index: row.atom_index,
+        shift_ppm: row.weighted_consensus_ppm,
+        consensus: true
+      }))
+    };
+  }
+  return sources;
+}
+
+function activePeakSource() {
+  return state.pinnedPeak || state.hoverPeak;
+}
+
+function peakGroups(nucleus = state.nucleus, visibleOnly = true) {
+  const spectra = shiftSources(nucleus);
+  const groups = [];
+  const tolerance = nucleus === "H" ? 0.03 : 0.5;
+  Object.entries(spectra).forEach(([key, model]) => {
+    if (visibleOnly && state.traceVisible[nucleus]?.[key] === false) return;
+    const shifts = [...(model.shifts || [])]
+      .filter((shift) => shift.shift_ppm !== undefined && shift.shift_ppm !== null)
+      .sort((a, b) => Number(a.shift_ppm) - Number(b.shift_ppm));
+    const bins = [];
+    shifts.forEach((shift) => {
+      const ppm = Number(shift.shift_ppm);
+      const last = bins[bins.length - 1];
+      const center = last ? last.reduce((sum, item) => sum + Number(item.shift_ppm), 0) / last.length : null;
+      if (!last || Math.abs(ppm - center) > tolerance) bins.push([shift]);
+      else last.push(shift);
+    });
+    bins.forEach((bin, index) => {
+      const atoms = [...new Set(bin.map((shift) => Number(shift.atom_index)).filter((n) => Number.isFinite(n)))].sort((a, b) => a - b);
+      const ppm = bin.reduce((sum, shift) => sum + Number(shift.shift_ppm), 0) / bin.length;
+      groups.push({
+        key: `${nucleus}:${key}:${index}`,
+        nucleus,
+        modelKey: key,
+        model,
+        color: model.color,
+        label: model.label,
+        element: nucleus,
+        ppm,
+        atoms,
+        shifts: bin,
+        multiplicity: bin[0]?.multiplicity || "s",
+        estimated: Boolean(bin[0]?.estimated),
+        J_hz: bin[0]?.J_hz || []
+      });
+    });
+  });
+  return groups;
+}
+
+function groupsForAtoms(atoms, nucleus = state.nucleus) {
+  const wanted = new Set(atoms.map(Number));
+  if (!wanted.size) return [];
+  return peakGroups(nucleus, true).filter((group) => group.atoms.some((atom) => wanted.has(atom)));
+}
+
+function drawInputTabs() {
+  const labels = { smiles: "SMILES", file: "File", name: "Name" };
+  $("inputTabs").innerHTML = Object.entries(labels).map(([key, label]) =>
+    `<button class="${state.tab === key ? "active" : ""}" data-tab="${key}">${label}</button>`
+  ).join("");
+}
+
+function drawInputPane() {
+  const pane = $("inputPane");
+  if (state.tab === "smiles") {
+    pane.innerHTML = `
+      <div class="row">
+        <input id="smilesInput" class="mono" value="CCO" spellcheck="false" autocomplete="off">
+        <button class="primary" id="submitSmiles">Confirm</button>
+      </div>
+      <div class="examples">${examples.map(([label, smiles]) => `<button data-example="${smiles}">${label}</button>`).join("")}</div>`;
+  } else if (state.tab === "file") {
+    pane.innerHTML = `
+      <input id="fileInput" type="file" accept=".mol,.sdf,.mol2,.txt">
+      <div style="height:8px"></div>
+      <textarea id="fileText" class="mono" placeholder="file contents appear here"></textarea>
+      <div style="height:8px"></div>
+      <button class="primary" id="submitFile">Confirm File Structure</button>`;
+  } else {
+    pane.innerHTML = `
+      <div class="row">
+        <input id="nameInput" value="aspirin" autocomplete="off">
+        <button class="primary" id="submitName">Resolve</button>
+      </div>
+      <div class="mono viewer-help" style="margin-top:8px">OPSIN is attempted offline when installed; common fallback names include aspirin, ethanol, benzene, acetic acid, ibuprofen.</div>`;
+  }
+  installPaneHandlers();
+}
+
+function installPaneHandlers() {
+  document.querySelectorAll("[data-example]").forEach((button) => {
+    button.addEventListener("click", () => postStructure("smiles", button.dataset.example, `example:${button.textContent}`));
+  });
+  $("submitSmiles")?.addEventListener("click", () => postStructure("smiles", $("smilesInput").value, "SMILES"));
+  $("smilesInput")?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") postStructure("smiles", $("smilesInput").value, "SMILES");
+  });
+  $("submitName")?.addEventListener("click", () => postStructure("name", $("nameInput").value, "name"));
+  $("nameInput")?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") postStructure("name", $("nameInput").value, "name");
+  });
+  $("fileInput")?.addEventListener("change", async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    $("fileText").value = text.split("$$$$", 1)[0];
+  });
+  $("submitFile")?.addEventListener("click", () => postStructure("molblock", $("fileText").value, "file"));
+}
+
+async function postStructure(type, value, source = type) {
+  if (!value || !value.trim()) return;
+  setStatus(`canonicalizing ${source}`);
+  try {
+    const response = await fetch("/api/structure", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, value })
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || "structure failed");
+    state.structure = { ...payload, source };
+    state.prediction = null;
+    state.pick = null;
+    state.integration = null;
+    state.hoverPeak = null;
+    state.pinnedPeak = null;
+    state.hoverAtoms = [];
+    state.pinnedAtoms = [];
+    state.traceVisible = { H: {}, C: {} };
+    state.solo = { H: null, C: null };
+    drawStructure();
+    drawPredictionControls();
+    drawViewer();
+    setStatus(`confirmed ${payload.smiles}`);
+  } catch (err) {
+    setStatus(err.message, true);
+  }
+}
+
+function drawStructure() {
+  const box = $("structureBox");
+  if (!state.structure) {
+    box.innerHTML = `<span class="mono" style="color:#66727e">submit a molecule</span>`;
+    $("confirmedSmiles").textContent = "SMILES: none";
+    $("structureSource").textContent = "source: none";
+    $("atomCount").textContent = "";
+    return;
+  }
+  box.innerHTML = state.structure.svg;
+  $("confirmedSmiles").textContent = `SMILES: ${state.structure.smiles}`;
+  $("structureSource").textContent = `source: ${state.structure.source}`;
+  $("atomCount").textContent = `${state.structure.num_atoms} atoms`;
+  installStructureAtomHandlers();
+  highlightStructureAtoms(activeAtoms());
+}
+
+function atomIndexFromElement(element) {
+  const className = element?.getAttribute?.("class") || "";
+  const match = className.match(/\batom-(\d+)\b/);
+  return match ? Number(match[1]) : null;
+}
+
+function atomIndexFromEventTarget(target) {
+  let node = target;
+  const svg = $("structureBox").querySelector("svg");
+  while (node && node !== svg && node !== $("structureBox")) {
+    const atomIndex = atomIndexFromElement(node);
+    if (atomIndex !== null) return atomIndex;
+    node = node.parentElement;
+  }
+  return null;
+}
+
+function installStructureAtomHandlers() {
+  const box = $("structureBox");
+  const svg = box.querySelector("svg");
+  if (!svg || svg.dataset.linked === "1") return;
+  svg.dataset.linked = "1";
+  svg.addEventListener("mousemove", (event) => {
+    const atomIndex = atomIndexFromEventTarget(event.target);
+    state.hoverAtoms = atomIndex === null ? [] : [atomIndex];
+    state.hoverPeak = null;
+    highlightStructureAtoms(activeAtoms());
+    drawViewer();
+  });
+  svg.addEventListener("mouseleave", () => {
+    state.hoverAtoms = [];
+    highlightStructureAtoms(activeAtoms());
+    drawViewer();
+  });
+  svg.addEventListener("click", (event) => {
+    const atomIndex = atomIndexFromEventTarget(event.target);
+    state.pinnedAtoms = atomIndex === null ? [] : [atomIndex];
+    state.pinnedPeak = null;
+    highlightStructureAtoms(activeAtoms());
+    drawViewer();
+  });
+}
+
+function highlightStructureAtoms(atoms) {
+  const box = $("structureBox");
+  const svg = box.querySelector("svg");
+  if (!svg) return;
+  svg.querySelectorAll(".atom-linked").forEach((node) => node.classList.remove("atom-linked"));
+  svg.querySelectorAll(".disagreement-low,.disagreement-moderate,.disagreement-high").forEach((node) => {
+    node.classList.remove("disagreement-low", "disagreement-moderate", "disagreement-high");
+  });
+  for (const nucleus of ["C", "H"]) {
+    const highThreshold = nucleus === "H" ? 0.3 : 3;
+    const moderateThreshold = highThreshold / 2;
+    (state.prediction?.consensus?.[nucleus] || []).forEach((row) => {
+      const level = row.spread_ppm > highThreshold
+        ? "high"
+        : row.spread_ppm > moderateThreshold ? "moderate" : "low";
+      svg.querySelectorAll(`.atom-${row.atom_index}`).forEach((node) => node.classList.add(`disagreement-${level}`));
+    });
+  }
+  const wanted = new Set(atoms.map(Number));
+  wanted.forEach((atomIndex) => {
+    svg.querySelectorAll(`.atom-${atomIndex}`).forEach((node) => node.classList.add("atom-linked"));
+  });
+}
+
+async function loadModels() {
+  try {
+    const response = await fetch("/api/models");
+    state.models = await response.json();
+    state.selectedModels = new Set(state.models.filter((m) => m.enabled).map((m) => m.key));
+    drawPredictionControls();
+  } catch (err) {
+    setStatus(`model list failed: ${err.message}`, true);
+  }
+}
+
+function drawPredictionControls() {
+  $("modelGrid").innerHTML = state.models.map((model) => `
+    <label class="model ${model.enabled ? "" : "off"}">
+      <input type="checkbox" data-model="${model.key}" ${state.selectedModels.has(model.key) ? "checked" : ""} ${model.enabled ? "" : "disabled"}>
+      <span class="swatch" style="background:${model.color};color:${model.color}"></span>
+      <span>${model.label}${model.couplings ? " + J" : ""}${model.enabled ? "" : " (off)"}</span>
+    </label>`
+  ).join("");
+  document.querySelectorAll("[data-model]").forEach((box) => {
+    box.addEventListener("change", () => {
+      if (box.checked) state.selectedModels.add(box.dataset.model);
+      else state.selectedModels.delete(box.dataset.model);
+      drawPredictionControls();
+    });
+  });
+  const canPredict = state.structure && state.selectedModels.size > 0;
+  $("predictButton").disabled = !canPredict;
+  $("selectionHint").textContent = state.structure
+    ? `${state.selectedModels.size} model(s) selected`
+    : "confirm a molecule before predicting";
+}
+
+async function predict() {
+  if (!state.structure || !state.selectedModels.size) return;
+  const models = [...state.selectedModels];
+  setStatus(`running ${models.join(", ")}`);
+  $("predictButton").disabled = true;
+  try {
+    const response = await fetch("/api/predict", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ smiles: state.structure.smiles, models })
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || "prediction failed");
+    state.prediction = payload;
+    initializeTraceVisibility(payload);
+    state.pick = null;
+    state.integration = null;
+    state.hoverPeak = null;
+    state.pinnedPeak = null;
+    state.hoverAtoms = [];
+    state.pinnedAtoms = [];
+    resetViewports();
+    drawViewer();
+    setStatus(`prediction complete: ${payload.smiles}`);
+  } catch (err) {
+    setStatus(err.message, true);
+  } finally {
+    drawPredictionControls();
+  }
+}
+
+function resetViewports() {
+  state.viewport.H = { min: -1, max: 13 };
+  state.viewport.C = { min: -10, max: 220 };
+  state.yview.H = { min: 0, max: 1.05 };
+  state.yview.C = { min: 0, max: 1.05 };
+  state.hsqcView = { hMin: -1, hMax: 13, cMin: -10, cMax: 220 };
+}
+
+function resizeCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = Math.floor(rect.width * dpr);
+  canvas.height = Math.floor(rect.height * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { width: rect.width, height: rect.height };
+}
+
+function visibleSpectra() {
+  const spectra = state.prediction?.simulations?.[state.nucleus] || {};
+  return Object.fromEntries(
+    Object.entries(spectra).filter(([key]) => visibleForCurrentNucleus(key))
+  );
+}
+
+function yAt(model, ppm) {
+  const spectrum = model.spectrum;
+  if (!spectrum?.x?.length) return 0;
+  let best = 0;
+  let bestDelta = Infinity;
+  for (let i = 0; i < spectrum.x.length; i++) {
+    const delta = Math.abs(spectrum.x[i] - ppm);
+    if (delta < bestDelta) {
+      bestDelta = delta;
+      best = spectrum.y[i];
+    }
+  }
+  return best;
+}
+
+function screenPointForPeak(group, metrics) {
+  const simModel = state.prediction?.simulations?.[group.nucleus]?.[group.modelKey];
+  const value = simModel ? yAt(simModel, group.ppm) : 0;
+  return {
+    x: ppmToX(group.ppm, metrics.left, metrics.plotW),
+    y: intensityToY(value, metrics.top, metrics.plotH, metrics.baseY),
+    value
+  };
+}
+
+function drawSelectionOverlay(metrics) {
+  if (!state.dragging || state.dragging.currentX === undefined) return;
+  const x1 = state.dragging.x;
+  const x2 = state.dragging.currentX;
+  const y1 = state.dragging.y;
+  const y2 = state.dragging.currentY;
+  ctx.save();
+  ctx.strokeStyle = "rgba(31,158,82,.75)";
+  ctx.fillStyle = "rgba(31,158,82,.10)";
+  ctx.setLineDash([5, 4]);
+  if (state.dragging.action === "zoomX") {
+    ctx.fillRect(Math.min(x1, x2), metrics.top, Math.abs(x2 - x1), metrics.plotH);
+    ctx.strokeRect(Math.min(x1, x2), metrics.top, Math.abs(x2 - x1), metrics.plotH);
+  } else if (state.dragging.action === "zoomY") {
+    ctx.fillRect(metrics.left, Math.min(y1, y2), metrics.plotW, Math.abs(y2 - y1));
+    ctx.strokeRect(metrics.left, Math.min(y1, y2), metrics.plotW, Math.abs(y2 - y1));
+  } else if (state.dragging.action === "box") {
+    ctx.fillRect(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
+    ctx.strokeRect(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
+  }
+  ctx.restore();
+}
+
+function drawPeakMarkers(metrics) {
+  const atomSet = new Set(activeAtoms());
+  const active = activePeakSource();
+  peakGroups(state.nucleus, true).forEach((group) => {
+    const win = activeWindow();
+    if (group.ppm < win.min || group.ppm > win.max) return;
+    const point = screenPointForPeak(group, metrics);
+    const atomLinked = group.atoms.some((atom) => atomSet.has(atom));
+    const isActive = active?.key === group.key || atomLinked;
+    ctx.save();
+    ctx.strokeStyle = isActive ? group.color : "rgba(107,114,128,.62)";
+    ctx.fillStyle = isActive ? group.color : "#FFFFFF";
+    ctx.lineWidth = isActive ? 2.2 : 1.2;
+    ctx.beginPath();
+    ctx.moveTo(point.x, metrics.baseY);
+    ctx.lineTo(point.x, Math.min(metrics.baseY - 8, point.y - 3));
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(point.x, Math.max(metrics.top + 5, point.y - 5), isActive ? 4 : 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  });
+}
+
+function drawPeakTooltip(group, metrics) {
+  if (!group) return;
+  const win = activeWindow();
+  if (group.ppm < win.min || group.ppm > win.max) return;
+  const point = screenPointForPeak(group, metrics);
+  const atoms = atomLabel(group.element, group.atoms);
+  const j = formatJ(group.J_hz);
+  const line1 = `${formatPpm(group.ppm)} ppm — ${atoms}`;
+  const line2 = `${group.label}: ${group.multiplicity || "s"}${j ? ` J=${j} Hz` : ""}${group.estimated ? " estimated" : ""}`;
+  ctx.save();
+  ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  const width = Math.max(ctx.measureText(line1).width, ctx.measureText(line2).width) + 18;
+  const height = 43;
+  const x = Math.min(Math.max(metrics.left, point.x + 10), metrics.left + metrics.plotW - width);
+  const y = Math.max(metrics.top + 6, point.y - height - 14);
+  ctx.fillStyle = "rgba(255,255,255,.96)";
+  ctx.strokeStyle = group.color;
+  ctx.lineWidth = 1.3;
+  ctx.beginPath();
+  ctx.roundRect(x, y, width, height, 6);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "#1A1A1A";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.fillText(line1, x + 9, y + 7);
+  ctx.fillStyle = "#6B7280";
+  ctx.fillText(line2, x + 9, y + 24);
+  ctx.restore();
+}
+
+function drawViewer() {
+  if (state.nucleus === "HSQC") {
+    drawHSQC();
+    return;
+  }
+  const { width, height } = resizeCanvas();
+  const metrics = plotMetrics(width, height);
+  const { left, top, plotW, plotH, baseY } = metrics;
+  const win = activeWindow();
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.strokeStyle = "rgba(229,231,235,.82)";
+  ctx.lineWidth = 1;
+  ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  ctx.fillStyle = "#6B7280";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  const range = win.max - win.min;
+  const tick = state.nucleus === "H" ? (range <= 2 ? 0.1 : range <= 6 ? 0.5 : 1) : (range <= 40 ? 5 : 20);
+  const start = Math.ceil(win.min / tick) * tick;
+  for (let ppm = start; ppm <= win.max; ppm += tick) {
+    const x = ppmToX(ppm, left, plotW);
+    ctx.beginPath();
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, baseY);
+    ctx.stroke();
+    ctx.fillText(Number(ppm).toFixed(tick < 1 ? 1 : 0), x, baseY + 9);
+  }
+
+  ctx.strokeStyle = "#6B7280";
+  ctx.beginPath();
+  ctx.moveTo(left, baseY);
+  ctx.lineTo(left + plotW, baseY);
+  ctx.stroke();
+
+  const spectra = visibleSpectra();
+  Object.entries(spectra).forEach(([key, model]) => {
+    const spec = model.spectrum;
+    if (!spec?.x?.length) return;
+    ctx.strokeStyle = model.color;
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i < spec.x.length; i++) {
+      const ppm = spec.x[i];
+      if (ppm < win.min || ppm > win.max) continue;
+      const x = ppmToX(ppm, left, plotW);
+      const y = intensityToY(spec.y[i] || 0, top, plotH, baseY);
+      if (!started) {
+        ctx.moveTo(x, y);
+        started = true;
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    if (started) ctx.stroke();
+  });
+
+  drawExperimentalTrace(metrics);
+
+  drawPeakMarkers(metrics);
+  drawSelectionOverlay(metrics);
+  drawPeakTooltip(activePeakSource(), metrics);
+
+  if (state.integration) {
+    const x1 = ppmToX(state.integration.start, left, plotW);
+    const x2 = ppmToX(state.integration.end, left, plotW);
+    ctx.fillStyle = "rgba(31,158,82,.12)";
+    ctx.fillRect(Math.min(x1, x2), top, Math.abs(x2 - x1), plotH);
+  }
+
+  if (!Object.keys(spectra).length) {
+    ctx.fillStyle = "#6B7280";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+    ctx.fillText("confirm structure and predict", left + plotW / 2, top + plotH / 2);
+  }
+
+  drawLegend();
+  drawPeakReadout();
+  drawPeakTables();
+  drawMaeTable();
+  drawAssignmentTable();
+  highlightStructureAtoms(activeAtoms());
+  updateCanvasCursor();
+}
+
+function drawExperimentalTrace(metrics) {
+  const experimental = state.experimental[state.nucleus];
+  if (!experimental || !state.experimentalVisible[state.nucleus]) return;
+  const win = activeWindow();
+  ctx.save();
+  ctx.strokeStyle = "#1A1A1A";
+  ctx.fillStyle = "#1A1A1A";
+  ctx.lineWidth = 1.7;
+  ctx.setLineDash([7, 4]);
+  const trace = experimental.trace;
+  if (trace?.x?.length) {
+    ctx.beginPath();
+    let started = false;
+    trace.x.forEach((ppm, index) => {
+      if (ppm < win.min || ppm > win.max) return;
+      const x = ppmToX(ppm, metrics.left, metrics.plotW);
+      const y = intensityToY(trace.y[index] || 0, metrics.top, metrics.plotH, metrics.baseY);
+      if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+    });
+    if (started) ctx.stroke();
+  } else {
+    (experimental.peaks || []).forEach((peak) => {
+      const ppm = Number(peak.shift_ppm);
+      if (ppm < win.min || ppm > win.max) return;
+      const x = ppmToX(ppm, metrics.left, metrics.plotW);
+      const y = intensityToY(Number(peak.intensity) || 1, metrics.top, metrics.plotH, metrics.baseY);
+      ctx.beginPath();
+      ctx.moveTo(x, metrics.baseY);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    });
+  }
+  ctx.restore();
+}
+
+function hsqcToScreen(peak, metrics) {
+  const view = state.hsqcView;
+  return {
+    x: metrics.left + ((view.hMax - peak.h_ppm) / (view.hMax - view.hMin)) * metrics.plotW,
+    y: metrics.top + ((view.cMax - peak.c_ppm) / (view.cMax - view.cMin)) * metrics.plotH
+  };
+}
+
+function screenToHsqc(x, y, metrics) {
+  const view = state.hsqcView;
+  return {
+    h: view.hMax - ((x - metrics.left) / metrics.plotW) * (view.hMax - view.hMin),
+    c: view.cMax - ((y - metrics.top) / metrics.plotH) * (view.cMax - view.cMin)
+  };
+}
+
+function activeHsqcPeak() {
+  return state.pinnedHsqc || state.hoverHsqc;
+}
+
+function nearestHsqcPeak(x, y, metrics) {
+  let best = null;
+  (state.prediction?.hsqc?.peaks || []).forEach((peak, index) => {
+    const point = hsqcToScreen(peak, metrics);
+    const distance = Math.hypot(point.x - x, point.y - y);
+    if (distance <= 18 && (!best || distance < best.distance)) best = { ...peak, key: `hsqc:${index}`, distance };
+  });
+  return best;
+}
+
+function drawHSQC() {
+  const { width, height } = resizeCanvas();
+  const metrics = plotMetrics(width, height);
+  const view = state.hsqcView;
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, width, height);
+  ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  ctx.fillStyle = "#6B7280";
+  ctx.strokeStyle = "rgba(229,231,235,.82)";
+  ctx.lineWidth = 1;
+
+  const hRange = view.hMax - view.hMin;
+  const hTick = hRange <= 2 ? 0.2 : hRange <= 7 ? 0.5 : 1;
+  for (let ppm = Math.ceil(view.hMin / hTick) * hTick; ppm <= view.hMax; ppm += hTick) {
+    const point = hsqcToScreen({ h_ppm: ppm, c_ppm: view.cMin }, metrics);
+    ctx.beginPath(); ctx.moveTo(point.x, metrics.top); ctx.lineTo(point.x, metrics.baseY); ctx.stroke();
+    ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillText(ppm.toFixed(hTick < 1 ? 1 : 0), point.x, metrics.baseY + 9);
+  }
+  const cRange = view.cMax - view.cMin;
+  const cTick = cRange <= 50 ? 5 : 20;
+  for (let ppm = Math.ceil(view.cMin / cTick) * cTick; ppm <= view.cMax; ppm += cTick) {
+    const point = hsqcToScreen({ h_ppm: view.hMin, c_ppm: ppm }, metrics);
+    ctx.beginPath(); ctx.moveTo(metrics.left, point.y); ctx.lineTo(metrics.left + metrics.plotW, point.y); ctx.stroke();
+    ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillText(ppm.toFixed(0), metrics.left - 7, point.y);
+  }
+  ctx.fillStyle = "#6B7280";
+  ctx.textAlign = "center"; ctx.fillText("1H ppm", metrics.left + metrics.plotW / 2, height - 14);
+  ctx.save(); ctx.translate(13, metrics.top + metrics.plotH / 2); ctx.rotate(-Math.PI / 2); ctx.fillText("13C ppm", 0, 0); ctx.restore();
+
+  const active = activeHsqcPeak();
+  (state.prediction?.hsqc?.peaks || []).forEach((peak, index) => {
+    const point = hsqcToScreen(peak, metrics);
+    if (point.x < metrics.left || point.x > metrics.left + metrics.plotW || point.y < metrics.top || point.y > metrics.baseY) return;
+    const selected = active?.key === `hsqc:${index}` || peak.h_atoms.some((atom) => activeAtoms().includes(atom)) || activeAtoms().includes(peak.c_atom);
+    ctx.save();
+    ctx.strokeStyle = selected ? "#DC2626" : "#1F9E52";
+    ctx.fillStyle = selected ? "rgba(220,38,38,.10)" : "rgba(31,158,82,.10)";
+    ctx.lineWidth = selected ? 2.2 : 1.5;
+    for (const radius of [5, 9, 13]) {
+      ctx.beginPath(); ctx.ellipse(point.x, point.y, radius * 1.25, radius, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.beginPath(); ctx.moveTo(point.x - 5, point.y); ctx.lineTo(point.x + 5, point.y); ctx.moveTo(point.x, point.y - 5); ctx.lineTo(point.x, point.y + 5); ctx.stroke();
+    ctx.restore();
+  });
+
+  if (["hsqcX", "hsqcY", "hsqcBox"].includes(state.dragging?.action)) {
+    ctx.save(); ctx.strokeStyle = "rgba(31,158,82,.8)"; ctx.fillStyle = "rgba(31,158,82,.10)"; ctx.setLineDash([5, 4]);
+    const isY = state.dragging.action === "hsqcY";
+    const isX = state.dragging.action === "hsqcX";
+    const x = isY ? metrics.left : Math.min(state.dragging.x, state.dragging.currentX);
+    const y = isX ? metrics.top : Math.min(state.dragging.y, state.dragging.currentY);
+    const w = isY ? metrics.plotW : Math.abs(state.dragging.currentX - state.dragging.x);
+    const h = isX ? metrics.plotH : Math.abs(state.dragging.currentY - state.dragging.y);
+    ctx.fillRect(x, y, w, h); ctx.strokeRect(x, y, w, h); ctx.restore();
+  }
+
+  if (active) {
+    const point = hsqcToScreen(active, metrics);
+    const text = `${formatPpm(active.h_ppm)} / ${formatPpm(active.c_ppm)} ppm — H${active.h_atoms.join(",")} ↔ C${active.c_atom}`;
+    ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+    const boxW = ctx.measureText(text).width + 18;
+    const boxX = Math.min(Math.max(metrics.left, point.x + 12), metrics.left + metrics.plotW - boxW);
+    const boxY = Math.max(metrics.top + 5, point.y - 34);
+    ctx.fillStyle = "rgba(255,255,255,.96)"; ctx.strokeStyle = "#1F9E52";
+    ctx.beginPath(); ctx.roundRect(boxX, boxY, boxW, 28, 5); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#1A1A1A"; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(text, boxX + 9, boxY + 14);
+  }
+
+  const atoms = active ? [active.c_atom, ...active.h_atoms] : activeAtoms();
+  highlightStructureAtoms(atoms);
+  $("peakReadout").textContent = active
+    ? `${formatPpm(active.h_ppm)} ppm 1H / ${formatPpm(active.c_ppm)} ppm 13C; H${active.h_atoms.join(",")} bonded to C${active.c_atom}`
+    : "hover or click a cross-peak";
+  $("integrationReadout").textContent = `${state.prediction?.hsqc?.peaks?.length || 0} one-bond C-H correlation(s); source: ${state.prediction?.hsqc?.source || "none"}`;
+  $("peakTables").innerHTML = "";
+  drawLegend();
+  drawMaeTable();
+  drawAssignmentTable();
+  updateCanvasCursor();
+}
+
+function drawLegend() {
+  if (state.nucleus === "HSQC") {
+    const source = state.prediction?.hsqc?.source;
+    $("traceControls").innerHTML = source
+      ? `<span class="trace-chip"><span class="swatch" style="background:#1A1A1A;color:#1A1A1A"></span><strong>${escapeHtml(source === "consensus" ? "Consensus HSQC" : source)}</strong></span>`
+      : `<span class="mono viewer-help">no paired 1H/13C shifts</span>`;
+    return;
+  }
+  const models = state.prediction?.models || {};
+  const spectra = shiftSources(state.nucleus);
+  const entries = { ...models };
+  if (spectra.consensus) entries.consensus = { label: "Consensus", color: "#1A1A1A", error: null };
+  let controls = Object.entries(entries).map(([key, model]) => {
+    if (model.error) {
+      return `<span class="trace-chip disabled" title="${escapeHtml(model.error)}">
+        <span class="swatch" style="background:#9CA3AF;color:#9CA3AF"></span>
+        <span>${escapeHtml(model.label)} failed</span>
+      </span>`;
+    }
+    if (!spectra[key]) return "";
+    const checked = visibleForCurrentNucleus(key);
+    const solo = state.solo[state.nucleus] === key;
+    return `<span class="trace-chip ${checked ? "" : "hidden"}" data-trace-chip="${key}">
+      <input type="checkbox" data-trace-toggle="${key}" ${checked ? "checked" : ""} aria-label="show ${escapeHtml(model.label)}">
+      <span class="swatch" style="background:${model.color};color:${model.color}"></span>
+      <button class="trace-label ${solo ? "active" : ""}" data-trace-solo="${key}" title="Solo ${escapeHtml(model.label)}">${key === "consensus" ? "<strong>Consensus</strong>" : escapeHtml(model.label)}${model.couplings ? " real J" : ""}</button>
+    </span>`;
+  }).join("");
+  const experimental = state.experimental[state.nucleus];
+  if (experimental) {
+    controls += `<span class="trace-chip ${state.experimentalVisible[state.nucleus] ? "" : "hidden"}">
+      <input type="checkbox" id="experimentalTraceToggle" ${state.experimentalVisible[state.nucleus] ? "checked" : ""} aria-label="show experimental trace">
+      <span class="swatch" style="background:#1A1A1A;color:#1A1A1A"></span>
+      <span class="trace-label">Experimental</span>
+    </span>`;
+  }
+  $("traceControls").innerHTML = controls || `<span class="mono viewer-help">no ${state.nucleus} traces</span>`;
+  document.querySelectorAll("[data-trace-toggle]").forEach((input) => {
+    input.addEventListener("change", () => setTraceVisibility(input.dataset.traceToggle, input.checked));
+  });
+  document.querySelectorAll("[data-trace-solo]").forEach((button) => {
+    button.addEventListener("click", () => toggleSolo(button.dataset.traceSolo));
+  });
+  $("experimentalTraceToggle")?.addEventListener("change", (event) => {
+    state.experimentalVisible[state.nucleus] = event.target.checked;
+    drawViewer();
+  });
+  $("legend").innerHTML = "";
+}
+
+function drawPeakReadout() {
+  const peak = activePeakSource();
+  if (peak) {
+    const j = formatJ(peak.J_hz);
+    $("peakReadout").textContent = `${peak.label}: ${formatPpm(peak.ppm)} ppm — ${atomLabel(peak.element, peak.atoms)}; ${peak.multiplicity || "s"}${j ? `, J=${j} Hz` : ""}${peak.estimated ? ", estimated" : ""}`;
+  } else if (state.hoverAtoms.length || state.pinnedAtoms.length) {
+    const atoms = activeAtoms();
+    const linked = groupsForAtoms(atoms).map((group) => `${group.label} ${formatPpm(group.ppm)} ppm`).join("; ");
+    $("peakReadout").textContent = linked || `${state.nucleus}${atoms.join(",")} has no visible peak`;
+  } else {
+    $("peakReadout").textContent = state.pick || "hover or click near a peak";
+  }
+  $("integrationReadout").textContent = state.integration
+    ? `${formatPpm(state.integration.start)} to ${formatPpm(state.integration.end)} ppm, area ~= ${state.integration.area.toFixed(3)}`
+    : "shift-drag integrates; Space or middle-drag pans";
+}
+
+function drawPeakTables() {
+  if (state.nucleus === "HSQC") {
+    $("peakTables").innerHTML = "";
+    return;
+  }
+  const spectra = shiftSources(state.nucleus);
+  const active = new Set(activeAtoms());
+  $("peakTables").innerHTML = Object.entries(spectra).filter(([key]) => visibleForCurrentNucleus(key)).map(([key, model]) => {
+    const chips = (model.shifts || []).map((shift) => {
+      const j = formatJ(shift.J_hz);
+      const atomIndex = Number(shift.atom_index);
+      return `<span class="peak-chip ${active.has(atomIndex) ? "atom-active" : ""}" style="border-color:${model.color}" data-peak-atom="${atomIndex}">
+        ${formatPpm(shift.shift_ppm)} ${shift.multiplicity || "s"} i=${shift.integration || 1}${j ? ` J=${j}` : ""}${shift.estimated ? " est" : ""}
+      </span>`;
+    }).join("");
+    return `<table class="peak-table mono"><tr><th style="color:${model.color};width:140px">${model.label}</th><td><div class="chip-list">${chips}</div></td></tr></table>`;
+  }).join("");
+  document.querySelectorAll("[data-peak-atom]").forEach((chip) => {
+    chip.addEventListener("mouseenter", () => {
+      state.hoverAtoms = [Number(chip.dataset.peakAtom)];
+      drawViewer();
+    });
+    chip.addEventListener("mouseleave", () => {
+      state.hoverAtoms = [];
+      drawViewer();
+    });
+  });
+}
+
+function groupedCenters(shifts, nucleus) {
+  const tolerance = nucleus === "H" ? 0.03 : 0.5;
+  const values = shifts.map((row) => Number(row.shift_ppm)).filter(Number.isFinite).sort((a, b) => a - b);
+  const groups = [];
+  values.forEach((value) => {
+    const last = groups[groups.length - 1];
+    const center = last ? last.reduce((sum, item) => sum + item, 0) / last.length : null;
+    if (!last || Math.abs(value - center) > tolerance) groups.push([value]);
+    else last.push(value);
+  });
+  return groups.map((group) => group.reduce((sum, item) => sum + item, 0) / group.length);
+}
+
+function fitMetrics(predicted, experimental) {
+  if (!predicted.length || !experimental.length) return null;
+  const errors = experimental.map((value) => Math.min(...predicted.map((candidate) => Math.abs(candidate - value))));
+  return {
+    mae: errors.reduce((sum, value) => sum + value, 0) / errors.length,
+    rmse: Math.sqrt(errors.reduce((sum, value) => sum + value * value, 0) / errors.length),
+    n: errors.length
+  };
+}
+
+function multipletMatchTable(nucleus, experimental, best) {
+  if (!best || !experimental.peaks.some((peak) => peak.multiplicity || peak.J_hz?.length || peak.integration)) return "";
+  const predicted = groupedPeakRows(best.model.shifts || [], nucleus);
+  if (!predicted.length) return "";
+  const rows = experimental.peaks.map((peak) => {
+    const match = predicted.reduce((current, candidate) => {
+      const delta = Math.abs(candidate.ppm - Number(peak.shift_ppm));
+      return !current || delta < current.delta ? { ...candidate, delta } : current;
+    }, null);
+    const experimentalAssignment = [
+      peak.multiplicity || "—",
+      peak.J_hz?.length ? `J=${formatJ(peak.J_hz)} Hz` : "",
+      peak.integration ? `${peak.integration}H` : ""
+    ].filter(Boolean).join("; ");
+    const predictedAssignment = [
+      match.multiplicity || "—",
+      match.J_hz?.length ? `J=${formatJ(match.J_hz)} Hz` : ""
+    ].filter(Boolean).join("; ");
+    return `<tr><td>${formatPpm(peak.shift_ppm)}</td><td>${escapeHtml(experimentalAssignment)}</td><td>${formatPpm(match.ppm)}</td><td>${escapeHtml(predictedAssignment)}</td><td>${formatPpm(match.delta)}</td></tr>`;
+  });
+  return `<div style="height:10px"></div><h3 style="margin-bottom:6px">Assigned Multiplets: Experimental vs ${escapeHtml(best.label)}</h3>
+    <table class="ranking-table mono"><thead><tr><th>Exp. ppm</th><th>Exp. assignment</th><th>Pred. ppm</th><th>Pred. assignment</th><th>Δ ppm</th></tr></thead><tbody>${rows.join("")}</tbody></table>`;
+}
+
+function drawMaeTable() {
+  const sections = [];
+  for (const nucleus of ["H", "C"]) {
+    const experimental = state.experimental[nucleus];
+    if (!experimental?.peaks?.length || !state.prediction) continue;
+    const observed = experimental.peaks.map((peak) => Number(peak.shift_ppm)).filter(Number.isFinite);
+    const ranking = Object.entries(shiftSources(nucleus)).map(([key, model]) => ({
+      key,
+      label: model.label,
+      model,
+      ...fitMetrics(groupedCenters(model.shifts || [], nucleus), observed)
+    })).filter((row) => Number.isFinite(row.mae)).sort((a, b) => a.mae - b.mae);
+    if (!ranking.length) continue;
+    sections.push(`<h3 style="margin-bottom:6px">${nucleus === "H" ? "1H" : "13C"}</h3>
+      <table class="ranking-table mono"><thead><tr><th>Rank</th><th>Trace</th><th>MAE (ppm)</th><th>RMSE (ppm)</th><th>Peaks</th></tr></thead><tbody>
+      ${ranking.map((row, index) => `<tr class="${index === 0 ? "best" : ""}"><td>${index + 1}</td><td>${escapeHtml(row.label)}</td><td>${formatPpm(row.mae)}</td><td>${formatPpm(row.rmse)}</td><td>${row.n}</td></tr>`).join("")}
+      </tbody></table>${multipletMatchTable(nucleus, experimental, ranking[0])}`);
+  }
+  $("maeTable").innerHTML = sections.length ? sections.join("<div style=\"height:14px\"></div>") : `<span class="mono viewer-help">load an experimental peak list to compare</span>`;
+}
+
+function assignmentRows() {
+  if (!state.prediction) return [];
+  const rows = new Map();
+  const modelKeys = Object.keys(state.prediction.models || {});
+  for (const nucleus of ["C", "H"]) {
+    for (const [modelKey, model] of Object.entries(state.prediction.spectra?.[nucleus] || {})) {
+      (model.shifts || []).forEach((shift) => {
+        const atomIndex = Number(shift.atom_index);
+        const key = `${nucleus}:${atomIndex}`;
+        if (!rows.has(key)) rows.set(key, { atom_index: atomIndex, element: nucleus, models: {} });
+        const row = rows.get(key);
+        row.models[modelKey] = Number(shift.shift_ppm);
+        if (modelKey === "fullsspruce" || !row.multiplicity) {
+          row.multiplicity = shift.multiplicity || "s";
+          row.J_hz = shift.J_hz || [];
+          row.estimated = Boolean(shift.estimated);
+        }
+      });
+    }
+    (state.prediction.consensus?.[nucleus] || []).forEach((item) => {
+      const key = `${nucleus}:${item.atom_index}`;
+      if (!rows.has(key)) rows.set(key, { atom_index: item.atom_index, element: nucleus, models: {} });
+      Object.assign(rows.get(key), {
+        consensus: item.weighted_consensus_ppm,
+        plainConsensus: item.consensus_ppm,
+        spread: item.spread_ppm,
+        stdev: item.stdev_ppm,
+        highDisagreement: item.high_disagreement
+      });
+    });
+  }
+  const couplingByAtom = {};
+  (state.prediction.spectra?.H?.fullsspruce?.couplings || []).forEach((coupling) => {
+    const atomI = Number(coupling.atom_i), atomJ = Number(coupling.atom_j);
+    (couplingByAtom[atomI] ||= []).push({ partner: atomJ, J_hz: Number(coupling.J_hz) });
+    (couplingByAtom[atomJ] ||= []).push({ partner: atomI, J_hz: Number(coupling.J_hz) });
+  });
+  return [...rows.values()].map((row) => ({ ...row, modelKeys, rawCouplings: couplingByAtom[row.atom_index] || [] }));
+}
+
+function assignmentSortValue(row, key) {
+  if (key.startsWith("model:")) return row.models[key.slice(6)] ?? Infinity;
+  return row[key] ?? Infinity;
+}
+
+function drawAssignmentTable() {
+  const rows = assignmentRows();
+  if (!rows.length) {
+    $("assignmentTable").innerHTML = `<span class="mono viewer-help">predict a molecule to populate assignments</span>`;
+    return;
+  }
+  const modelKeys = Object.keys(state.prediction.models || {}).filter((key) =>
+    rows.some((row) => row.models[key] !== undefined)
+  );
+  const { key, direction } = state.assignmentSort;
+  rows.sort((a, b) => {
+    const av = assignmentSortValue(a, key);
+    const bv = assignmentSortValue(b, key);
+    return (typeof av === "string" ? av.localeCompare(bv) : av - bv) * direction;
+  });
+  const heading = (sortKey, label) => `<button data-assignment-sort="${sortKey}">${label}${key === sortKey ? (direction > 0 ? " ↑" : " ↓") : ""}</button>`;
+  $("assignmentTable").innerHTML = `<table class="assignment-table mono"><thead><tr>
+    <th>${heading("atom_index", "Atom")}</th><th>${heading("element", "Element")}</th>
+    ${modelKeys.map((modelKey) => `<th>${heading(`model:${modelKey}`, state.prediction.models[modelKey]?.label || modelKey)}</th>`).join("")}
+    <th>${heading("consensus", "Consensus")}</th><th>${heading("spread", "Spread")}</th><th>Mult.</th><th>J (Hz)</th>
+    </tr></thead><tbody>${rows.map((row) => {
+      const selected = state.selectedAssignment?.atom_index === row.atom_index && state.selectedAssignment?.element === row.element;
+      return `<tr class="${selected ? "selected" : ""}" data-assignment-atom="${row.atom_index}" data-assignment-element="${row.element}">
+        <td>${row.atom_index}</td><td>${row.element}</td>
+        ${modelKeys.map((modelKey) => `<td>${row.models[modelKey] === undefined ? "—" : formatPpm(row.models[modelKey])}</td>`).join("")}
+        <td>${row.consensus === undefined ? "—" : formatPpm(row.consensus)}</td>
+        <td style="color:${row.highDisagreement ? "var(--bad)" : "inherit"}">${row.spread === undefined ? "—" : formatPpm(row.spread)}</td>
+        <td>${row.multiplicity || "—"}${row.estimated ? " est" : ""}</td><td>${formatJ(row.J_hz) || "—"}</td>
+      </tr>`;
+    }).join("")}</tbody></table>`;
+  document.querySelectorAll("[data-assignment-sort]").forEach((button) => button.addEventListener("click", () => {
+    const sortKey = button.dataset.assignmentSort;
+    state.assignmentSort = { key: sortKey, direction: state.assignmentSort.key === sortKey ? -state.assignmentSort.direction : 1 };
+    drawAssignmentTable();
+  }));
+  document.querySelectorAll("[data-assignment-atom]").forEach((row) => row.addEventListener("click", () => {
+    const atomIndex = Number(row.dataset.assignmentAtom);
+    const element = row.dataset.assignmentElement;
+    state.selectedAssignment = { atom_index: atomIndex, element };
+    state.nucleus = element;
+    document.querySelectorAll("[data-nucleus]").forEach((button) => button.classList.toggle("active", button.dataset.nucleus === element));
+    state.pinnedAtoms = [atomIndex];
+    state.pinnedPeak = groupsForAtoms([atomIndex], element)[0] || null;
+    drawViewer();
+  }));
+}
+
+function csvCell(value) {
+  const text = value === undefined || value === null ? "" : String(value);
+  return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+function downloadBlob(filename, content, type) {
+  const url = URL.createObjectURL(content instanceof Blob ? content : new Blob([content], { type }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function assignmentsCsv() {
+  const rows = assignmentRows();
+  const modelKeys = Object.keys(state.prediction?.models || {});
+  const header = ["atom_index", "element", ...modelKeys, "consensus_ppm", "plain_mean_ppm", "spread_ppm", "stdev_ppm", "multiplicity", "J_hz", "coupling_partners", "raw_couplings_hz", "estimated"];
+  return [header, ...rows.map((row) => [row.atom_index, row.element, ...modelKeys.map((key) => row.models[key]), row.consensus, row.plainConsensus, row.spread, row.stdev, row.multiplicity, (row.J_hz || []).join(";"), row.rawCouplings.map((item) => item.partner).join(";"), row.rawCouplings.map((item) => item.J_hz).join(";"), row.estimated])]
+    .map((row) => row.map(csvCell).join(",")).join("\n");
+}
+
+function peaksCsv() {
+  const rows = [["nucleus", "trace", "shift_ppm", "atom_indices", "multiplicity", "J_hz"]];
+  for (const nucleus of ["H", "C"]) {
+    Object.entries(shiftSources(nucleus)).forEach(([key, model]) => {
+      groupedPeakRows(model.shifts || [], nucleus).forEach((peak) => rows.push([nucleus, key, peak.ppm, peak.atoms.join(";"), peak.multiplicity, peak.J_hz.join(";")]));
+    });
+  }
+  return rows.map((row) => row.map(csvCell).join(",")).join("\n");
+}
+
+function groupedPeakRows(shifts, nucleus) {
+  const tolerance = nucleus === "H" ? 0.03 : 0.5;
+  const groups = [];
+  [...shifts].sort((a, b) => Number(a.shift_ppm) - Number(b.shift_ppm)).forEach((shift) => {
+    const last = groups[groups.length - 1];
+    const center = last ? last.reduce((sum, row) => sum + Number(row.shift_ppm), 0) / last.length : null;
+    if (!last || Math.abs(Number(shift.shift_ppm) - center) > tolerance) groups.push([shift]); else last.push(shift);
+  });
+  return groups.map((group) => ({
+    ppm: group.reduce((sum, row) => sum + Number(row.shift_ppm), 0) / group.length,
+    atoms: group.map((row) => row.atom_index),
+    multiplicity: group[0]?.multiplicity || "s",
+    J_hz: group[0]?.J_hz || []
+  }));
+}
+
+function exportCurrentSvg() {
+  const width = canvas.width / (window.devicePixelRatio || 1);
+  const height = canvas.height / (window.devicePixelRatio || 1);
+  const raster = canvas.toDataURL("image/png");
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><image width="${width}" height="${height}" href="${raster}"/></svg>`;
+}
+
+function handleExport(kind) {
+  if (!state.prediction) return setStatus("predict a molecule before exporting", true);
+  const stem = `nmr-${state.prediction.smiles.replace(/[^A-Za-z0-9]+/g, "-") || "prediction"}`;
+  if (kind === "json") downloadBlob(`${stem}.json`, JSON.stringify(state.prediction, null, 2), "application/json");
+  if (kind === "assignments") downloadBlob(`${stem}-assignments.csv`, assignmentsCsv(), "text/csv");
+  if (kind === "peaks") downloadBlob(`${stem}-peaks.csv`, peaksCsv(), "text/csv");
+  if (kind === "svg") downloadBlob(`${stem}-${state.nucleus}.svg`, exportCurrentSvg(), "image/svg+xml");
+  if (kind === "png") canvas.toBlob((blob) => blob && downloadBlob(`${stem}-${state.nucleus}.png`, blob, "image/png"));
+}
+
+function nearestPeak(ppm) {
+  let best = null;
+  const tolerance = state.nucleus === "H" ? 0.08 : 1.2;
+  peakGroups(state.nucleus, true).forEach((group) => {
+    const delta = Math.abs(group.ppm - ppm);
+    if (delta <= tolerance && (!best || delta < best.delta)) {
+      best = { ...group, delta };
+    }
+  });
+  return best;
+}
+
+function nearestPeakFromPoint(x, y, metrics) {
+  let best = null;
+  peakGroups(state.nucleus, true).forEach((group) => {
+    const win = activeWindow();
+    if (group.ppm < win.min || group.ppm > win.max) return;
+    const point = screenPointForPeak(group, metrics);
+    const dx = point.x - x;
+    const dy = point.y - y;
+    const onMarker = Math.abs(dx) <= 10 && y >= Math.min(point.y - 16, metrics.baseY) && y <= metrics.baseY + 8;
+    const distance = onMarker ? Math.abs(dx) : Math.sqrt(dx * dx + dy * dy);
+    if (distance <= 22 && (!best || distance < best.distance)) {
+      best = { ...group, distance };
+    }
+  });
+  return best;
+}
+
+function integrateRegion(start, end) {
+  const spectra = visibleSpectra();
+  let area = 0;
+  const lo = Math.min(start, end);
+  const hi = Math.max(start, end);
+  Object.values(spectra).forEach((model) => {
+    const spec = model.spectrum;
+    for (let i = 1; i < spec.x.length; i++) {
+      const ppm = spec.x[i];
+      if (ppm < lo || ppm > hi) continue;
+      area += Math.abs(spec.x[i] - spec.x[i - 1]) * (spec.y[i] || 0);
+    }
+  });
+  return area;
+}
+
+function setZoomMode(mode) {
+  state.zoomMode = mode;
+  document.querySelectorAll("[data-zoom-mode]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.zoomMode === mode);
+  });
+  updateCanvasCursor();
+}
+
+function updateCanvasCursor() {
+  canvas.classList.toggle("mode-horizontal", state.zoomMode === "horizontal" && !state.spaceDown);
+  canvas.classList.toggle("mode-vertical", state.zoomMode === "vertical" && !state.spaceDown);
+  canvas.classList.toggle("mode-box", state.zoomMode === "box" && !state.spaceDown);
+  canvas.classList.toggle("pan-cursor", state.spaceDown || ["pan", "hsqcPan"].includes(state.dragging?.action));
+}
+
+canvas.addEventListener("wheel", (event) => {
+  event.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const metrics = plotMetrics(rect.width, rect.height);
+  if (state.nucleus === "HSQC") {
+    const point = screenToHsqc(event.clientX - rect.left, event.clientY - rect.top, metrics);
+    const view = state.hsqcView;
+    const factor = event.deltaY < 0 ? 0.78 : 1.28;
+    view.hMin = point.h - (point.h - view.hMin) * factor;
+    view.hMax = point.h + (view.hMax - point.h) * factor;
+    drawViewer();
+    return;
+  }
+  const ppm = xToPpm(event.clientX - rect.left, metrics.left, metrics.plotW);
+  const win = activeWindow();
+  const factor = event.deltaY < 0 ? 0.78 : 1.28;
+  const newMin = ppm - (ppm - win.min) * factor;
+  const newMax = ppm + (win.max - ppm) * factor;
+  if (newMax - newMin > 0.02) {
+    win.min = newMin;
+    win.max = newMax;
+    drawViewer();
+  }
+}, { passive: false });
+
+canvas.addEventListener("mousedown", (event) => {
+  event.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const metrics = plotMetrics(rect.width, rect.height);
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  if (state.nucleus === "HSQC") {
+    const point = screenToHsqc(x, y, metrics);
+    const action = event.button === 1 || state.spaceDown
+      ? "hsqcPan"
+      : state.zoomMode === "vertical" ? "hsqcY" : state.zoomMode === "horizontal" ? "hsqcX" : "hsqcBox";
+    state.dragging = { action, x, y, currentX: x, currentY: y, lastX: x, lastY: y, h: point.h, c: point.c };
+    if (action !== "hsqcPan") state.pinnedHsqc = null;
+    updateCanvasCursor();
+    return;
+  }
+  const ppm = xToPpm(x, metrics.left, metrics.plotW);
+  const intensity = yToIntensity(y, metrics.top, metrics.plotH, metrics.baseY);
+  const action = event.shiftKey
+    ? "integrate"
+    : (event.button === 1 || state.spaceDown ? "pan" : state.zoomMode === "box" ? "box" : state.zoomMode === "vertical" ? "zoomY" : "zoomX");
+  state.dragging = {
+    action,
+    ppm,
+    intensity,
+    x,
+    y,
+    currentX: x,
+    currentY: y,
+    lastX: x,
+    lastY: y
+  };
+  if (action !== "pan") {
+    state.hoverPeak = null;
+    if (action !== "integrate") state.pinnedPeak = null;
+  }
+  updateCanvasCursor();
+});
+
+window.addEventListener("mousemove", (event) => {
+  const rect = canvas.getBoundingClientRect();
+  const metrics = plotMetrics(rect.width, rect.height);
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  if (state.nucleus === "HSQC") {
+    if (!state.dragging) {
+      const hover = x >= metrics.left && x <= metrics.left + metrics.plotW && y >= metrics.top && y <= metrics.baseY
+        ? nearestHsqcPeak(x, y, metrics) : null;
+      if ((hover?.key || null) !== (state.hoverHsqc?.key || null)) {
+        state.hoverHsqc = hover;
+        drawViewer();
+      }
+      return;
+    }
+    state.dragging.currentX = x;
+    state.dragging.currentY = y;
+    if (state.dragging.action === "hsqcPan") {
+      const view = state.hsqcView;
+      const hDelta = ((x - state.dragging.lastX) / metrics.plotW) * (view.hMax - view.hMin);
+      const cDelta = ((y - state.dragging.lastY) / metrics.plotH) * (view.cMax - view.cMin);
+      view.hMin += hDelta; view.hMax += hDelta;
+      view.cMin += cDelta; view.cMax += cDelta;
+      state.dragging.lastX = x; state.dragging.lastY = y;
+    }
+    drawViewer();
+    return;
+  }
+  const ppm = xToPpm(x, metrics.left, metrics.plotW);
+  if (!state.dragging) {
+    const hover = x >= metrics.left && x <= metrics.left + metrics.plotW && y >= metrics.top && y <= metrics.baseY
+      ? nearestPeakFromPoint(x, y, metrics)
+      : null;
+    if ((hover?.key || null) !== (state.hoverPeak?.key || null)) {
+      state.hoverPeak = hover;
+      state.hoverAtoms = [];
+      drawViewer();
+    }
+    return;
+  }
+
+  state.dragging.currentX = x;
+  state.dragging.currentY = y;
+  if (state.dragging.action === "integrate") {
+    state.integration = {
+      start: state.dragging.ppm,
+      end: ppm,
+      area: integrateRegion(state.dragging.ppm, ppm)
+    };
+  } else if (state.dragging.action === "pan") {
+    const win = activeWindow();
+    const delta = ((x - state.dragging.lastX) / metrics.plotW) * (win.max - win.min);
+    win.min += delta;
+    win.max += delta;
+    state.dragging.lastX = x;
+    state.dragging.lastY = y;
+  }
+  drawViewer();
+});
+
+window.addEventListener("mouseup", (event) => {
+  if (!state.dragging) return;
+  const rect = canvas.getBoundingClientRect();
+  const metrics = plotMetrics(rect.width, rect.height);
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  if (state.nucleus === "HSQC") {
+    const moved = Math.abs(x - state.dragging.x) + Math.abs(y - state.dragging.y);
+    const action = state.dragging.action;
+    const start = screenToHsqc(state.dragging.x, state.dragging.y, metrics);
+    const end = screenToHsqc(x, y, metrics);
+    if ((action === "hsqcX" || action === "hsqcBox") && Math.abs(x - state.dragging.x) > 6) {
+      state.hsqcView.hMin = Math.min(start.h, end.h); state.hsqcView.hMax = Math.max(start.h, end.h);
+    }
+    if ((action === "hsqcY" || action === "hsqcBox") && Math.abs(y - state.dragging.y) > 6) {
+      state.hsqcView.cMin = Math.min(start.c, end.c); state.hsqcView.cMax = Math.max(start.c, end.c);
+    }
+    if (!["hsqcPan"].includes(action) && moved <= 6) {
+      const best = nearestHsqcPeak(x, y, metrics);
+      state.pinnedHsqc = best && state.pinnedHsqc?.key !== best.key ? best : null;
+      state.pinnedAtoms = [];
+    }
+    state.dragging = null;
+    drawViewer();
+    return;
+  }
+  const ppm = xToPpm(x, metrics.left, metrics.plotW);
+  const moved = Math.abs(x - state.dragging.x) + Math.abs(y - state.dragging.y);
+  const action = state.dragging.action;
+
+  if (action === "zoomX" && Math.abs(x - state.dragging.x) > 6) {
+    const start = xToPpm(state.dragging.x, metrics.left, metrics.plotW);
+    const end = xToPpm(x, metrics.left, metrics.plotW);
+    activeWindow().min = Math.min(start, end);
+    activeWindow().max = Math.max(start, end);
+  } else if (action === "zoomY" && Math.abs(y - state.dragging.y) > 6) {
+    const start = yToIntensity(state.dragging.y, metrics.top, metrics.plotH, metrics.baseY);
+    const end = yToIntensity(y, metrics.top, metrics.plotH, metrics.baseY);
+    activeYWindow().min = Math.max(0, Math.min(start, end));
+    activeYWindow().max = Math.max(activeYWindow().min + 0.02, Math.max(start, end));
+  } else if (action === "box" && Math.abs(x - state.dragging.x) > 6 && Math.abs(y - state.dragging.y) > 6) {
+    const start = xToPpm(state.dragging.x, metrics.left, metrics.plotW);
+    const end = xToPpm(x, metrics.left, metrics.plotW);
+    activeWindow().min = Math.min(start, end);
+    activeWindow().max = Math.max(start, end);
+    const yStart = yToIntensity(state.dragging.y, metrics.top, metrics.plotH, metrics.baseY);
+    const yEnd = yToIntensity(y, metrics.top, metrics.plotH, metrics.baseY);
+    activeYWindow().min = Math.max(0, Math.min(yStart, yEnd));
+    activeYWindow().max = Math.max(activeYWindow().min + 0.02, Math.max(yStart, yEnd));
+  } else if (action !== "integrate" && action !== "pan" && moved <= 6) {
+    const best = nearestPeak(ppm);
+    if (best) {
+      state.pinnedPeak = state.pinnedPeak?.key === best.key ? null : best;
+      state.pinnedAtoms = [];
+      state.pick = `${best.label}: ${formatPpm(best.ppm)} ppm — ${atomLabel(best.element, best.atoms)}`;
+    } else {
+      state.pinnedPeak = null;
+      state.pinnedAtoms = [];
+      state.pick = null;
+    }
+  }
+  state.dragging = null;
+  drawViewer();
+});
+
+document.querySelector(".viewer-tabs").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-nucleus]");
+  if (!button) return;
+  state.nucleus = button.dataset.nucleus;
+  document.querySelectorAll("[data-nucleus]").forEach((b) => b.classList.toggle("active", b === button));
+  state.pick = null;
+  state.integration = null;
+  state.hoverPeak = null;
+  state.pinnedPeak = null;
+  state.hoverAtoms = [];
+  state.pinnedAtoms = [];
+  state.hoverHsqc = null;
+  state.pinnedHsqc = null;
+  drawViewer();
+});
+
+canvas.addEventListener("mouseleave", () => {
+  state.hoverPeak = null;
+  state.hoverHsqc = null;
+  if (!state.dragging) {
+    drawViewer();
+  }
+});
+
+$("inputTabs").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-tab]");
+  if (!button) return;
+  state.tab = button.dataset.tab;
+  drawInputTabs();
+  drawInputPane();
+});
+
+$("predictButton").addEventListener("click", predict);
+window.addEventListener("resize", drawViewer);
+
+$("zoomTools").addEventListener("click", (event) => {
+  const modeButton = event.target.closest("[data-zoom-mode]");
+  if (modeButton) {
+    setZoomMode(modeButton.dataset.zoomMode);
+    return;
+  }
+  if (event.target.closest("#resetZoom")) {
+    resetViewports();
+    state.integration = null;
+    state.hoverPeak = null;
+    state.pinnedPeak = null;
+    state.hoverHsqc = null;
+    state.pinnedHsqc = null;
+    drawViewer();
+  }
+});
+
+window.addEventListener("keydown", (event) => {
+  if (event.code !== "Space" || event.target?.matches?.("input, textarea, button")) return;
+  event.preventDefault();
+  state.spaceDown = true;
+  updateCanvasCursor();
+});
+
+window.addEventListener("keyup", (event) => {
+  if (event.code !== "Space") return;
+  state.spaceDown = false;
+  updateCanvasCursor();
+});
+
+$("experimentalFile").addEventListener("change", async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  state.experimentalFilename = file.name;
+  const extension = file.name.toLowerCase().split(".").pop();
+  if (["jdf", "mnova"].includes(extension)) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let binary = "";
+    const chunkSize = 0x8000;
+    for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+    }
+    state.experimentalBase64 = btoa(binary);
+    $("experimentalText").value = "";
+    $("experimentalStatus").textContent = `${file.name}: ${(file.size / 1024 / 1024).toFixed(2)} MB binary file ready`;
+  } else {
+    state.experimentalBase64 = null;
+    $("experimentalText").value = await file.text();
+  }
+  $("experimentalNote").hidden = true;
+});
+
+$("loadExperimental").addEventListener("click", async () => {
+  const nucleus = $("experimentalNucleus").value;
+  const text = $("experimentalText").value;
+  if (!text.trim() && !state.experimentalBase64) return setStatus("paste or upload experimental data first", true);
+  setStatus(`parsing experimental ${nucleus}`);
+  try {
+    const response = await fetch("/api/experimental", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nucleus, text, filename: state.experimentalFilename, data_base64: state.experimentalBase64 })
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || "experimental parse failed");
+    if (payload.spectra) {
+      Object.entries(payload.spectra).forEach(([parsedNucleus, spectrum]) => {
+        state.experimental[parsedNucleus] = { ...spectrum, format: payload.format, parser: payload.parser, filename: payload.filename };
+        state.experimentalVisible[parsedNucleus] = true;
+      });
+    } else {
+      state.experimental[payload.nucleus] = payload;
+      state.experimentalVisible[payload.nucleus] = true;
+    }
+    state.nucleus = payload.nucleus;
+    document.querySelectorAll("[data-nucleus]").forEach((button) => button.classList.toggle("active", button.dataset.nucleus === payload.nucleus));
+    const counts = payload.spectra
+      ? Object.entries(payload.spectra).map(([key, value]) => `${key}:${value.peaks.length}`).join(" / ")
+      : `${payload.peaks.length} peak(s)`;
+    const metadata = [payload.frequency_mhz ? `${payload.frequency_mhz} MHz` : "", payload.solvent || ""].filter(Boolean).join(", ");
+    $("experimentalStatus").textContent = `${payload.parser || payload.format}: ${counts}${metadata ? ` (${metadata})` : ""}`;
+    $("experimentalNote").textContent = payload.processing_note || "";
+    $("experimentalNote").hidden = !payload.processing_note;
+    drawViewer();
+    setStatus(`${payload.parser || payload.format} experimental data loaded`);
+  } catch (error) {
+    $("experimentalNote").textContent = error.message;
+    $("experimentalNote").hidden = false;
+    setStatus(error.message, true);
+  }
+});
+
+document.querySelectorAll("[data-export]").forEach((button) => button.addEventListener("click", () => handleExport(button.dataset.export)));
+
+drawInputTabs();
+drawInputPane();
+drawStructure();
+drawViewer();
+loadModels();
+</script>
+</body>
+</html>
