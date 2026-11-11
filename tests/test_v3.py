@@ -234,5 +234,19 @@ class OfflineFrontendTests(unittest.TestCase):
         self.assertIsNone(re.search(r"<(?:script|link)[^>]+(?:src|href)=[\"']https?://", html))
 
 
+class StructureNumberingTests(unittest.TestCase):
+    def test_drawing_uses_model_atom_order(self):
+        from rdkit import Chem
+        from structure import canonicalize_structure
+
+        result = canonicalize_structure("smiles", "OCC")
+        drawn = Chem.MolFromMolBlock(result["molblock"], removeHs=False)
+        model = Chem.AddHs(Chem.MolFromSmiles(result["smiles"]))
+        self.assertEqual(
+            [atom.GetSymbol() for atom in drawn.GetAtoms()],
+            [atom.GetSymbol() for atom in model.GetAtoms()],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

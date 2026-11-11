@@ -6,13 +6,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 
 from consensus import build_consensus, consensus_shifts
 from experimental import parse_experimental
 from hsqc import build_hsqc
-from multiplicity import annotate_shifts
+from multiplicity import CARBON_TOLERANCE, PROTON_TOLERANCE, annotate_shifts
 from simulate import simulate_payload, simulate_spectrum
 from structure import canonicalize_structure
 
@@ -21,7 +21,7 @@ APP_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = APP_DIR / "config.json"
 EXAMPLE_CONFIG_PATH = APP_DIR / "config.example.json"
 FRONTEND_PATH = APP_DIR / "frontend" / "index.html"
-NUCLEUS_TOLERANCE = {"C": 0.5, "H": 0.03}
+NUCLEUS_TOLERANCE = {"C": CARBON_TOLERANCE, "H": PROTON_TOLERANCE}
 
 app = FastAPI(title="NMR Multi-Model Predictor")
 
@@ -193,12 +193,7 @@ def api_models() -> list[dict[str, Any]]:
 
 
 @app.post("/api/structure")
-async def api_structure(request: Request) -> dict[str, Any]:
-    try:
-        body = await request.json()
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"invalid JSON: {exc}") from exc
-
+def api_structure(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
     kind = str(body.get("type", "")).strip().lower()
     value = str(body.get("value", ""))
     if kind not in {"smiles", "molblock", "name"}:
@@ -230,12 +225,7 @@ def selected_enabled_models(config: dict[str, Any], requested: Any) -> dict[str,
 
 
 @app.post("/api/predict")
-async def api_predict(request: Request) -> dict[str, Any]:
-    try:
-        body = await request.json()
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"invalid JSON: {exc}") from exc
-
+def api_predict(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
     smiles = str(body.get("smiles", "")).strip()
     if not smiles:
         raise HTTPException(status_code=400, detail="smiles is required")
@@ -274,12 +264,7 @@ async def api_predict(request: Request) -> dict[str, Any]:
 
 
 @app.post("/api/experimental")
-async def api_experimental(request: Request) -> dict[str, Any]:
-    try:
-        body = await request.json()
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"invalid JSON: {exc}") from exc
-
+def api_experimental(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
     try:
         encoded = body.get("data_base64")
         data_bytes = None
@@ -301,12 +286,7 @@ async def api_experimental(request: Request) -> dict[str, Any]:
 
 
 @app.post("/api/simulate")
-async def api_simulate(request: Request) -> dict[str, Any]:
-    try:
-        body = await request.json()
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"invalid JSON: {exc}") from exc
-
+def api_simulate(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
     if "spectra" not in body:
         raise HTTPException(status_code=400, detail="prediction payload with spectra is required")
     return simulate_payload(body)

@@ -1,4 +1,3 @@
-from collections import defaultdict
 from typing import Any
 
 from rdkit import Chem
@@ -169,11 +168,3 @@ def annotate_shifts(
             item["estimated"] = not uses_real_couplings
         annotated.append(item)
     return annotated
-
-
-def couplings_by_atom(couplings: list[dict[str, Any]]) -> dict[int, list[dict[str, Any]]]:
-    by_atom: dict[int, list[dict[str, Any]]] = defaultdict(list)
-    for coupling in couplings:
-        by_atom[int(coupling["atom_i"])].append(coupling)
-        by_atom[int(coupling["atom_j"])].append(coupling)
-    return by_atom

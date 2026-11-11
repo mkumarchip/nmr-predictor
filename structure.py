@@ -103,7 +103,8 @@ def canonicalize_structure(kind: str, value: str) -> dict[str, Any]:
 
     heavy = Chem.RemoveHs(Chem.Mol(mol))
     canonical_smiles = Chem.MolToSmiles(heavy, canonical=True, isomericSmiles=True)
-    display_mol = _prepare_2d_mol(heavy)
+    # Models index atoms in canonical-SMILES order, so the drawing must too.
+    display_mol = _prepare_2d_mol(Chem.MolFromSmiles(canonical_smiles))
     for atom in display_mol.GetAtoms():
         atom.SetProp("atomNote", str(atom.GetIdx()))
     molblock = Chem.MolToMolBlock(display_mol)
@@ -124,9 +125,3 @@ def canonicalize_structure(kind: str, value: str) -> dict[str, Any]:
         "error": None,
     }
 
-
-def mol_with_hydrogens(smiles: str) -> Chem.Mol:
-    mol = Chem.MolFromSmiles(smiles)
-    if mol is None:
-        raise ValueError(f"invalid SMILES: {smiles}")
-    return Chem.AddHs(mol)

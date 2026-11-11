@@ -26,9 +26,7 @@ nmr-app/
 │   ├── run_nmrnet.py
 │   └── run_fullsspruce.py
 ├── frontend/
-│   ├── index.html
-│   ├── package.json
-│   └── src/main.jsx
+│   └── index.html
 ├── README.md
 ├── LICENSE
 └── THIRD_PARTY_NOTICES.md
@@ -143,7 +141,7 @@ The current UI provides the accepted interim viewer:
 
 FullSSPrUCe multiplets are drawn from real H-H couplings and are labeled as non-estimated. Shift-only models use the first-order n+1 proton multiplicity heuristic and label those multiplets as estimated.
 
-`frontend/package.json` includes a React/Vite/nmrium scaffold for the target nmrium integration, but npm package installation was not completed in this environment. The served offline UI does not make frontend network requests at runtime.
+The served offline UI does not make frontend network requests at runtime.
 
 ## Notes
 

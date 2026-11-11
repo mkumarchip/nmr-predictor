@@ -5,6 +5,8 @@ import tempfile
 import zipfile
 from typing import Any
 
+from multiplicity import CARBON_TOLERANCE, PROTON_TOLERANCE
+
 
 NUMBER_RE = re.compile(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][-+]?\d+)?")
 MNOVA_BLOCK_RE = re.compile(
@@ -174,7 +176,7 @@ def _local_maxima(x: list[float], y: list[float], nucleus: str) -> list[dict[str
     if maximum <= 0:
         return []
     values /= maximum
-    tolerance = 0.03 if nucleus == "H" else 0.5
+    tolerance = PROTON_TOLERANCE if nucleus == "H" else CARBON_TOLERANCE
     resolution = abs(float(x[1]) - float(x[0])) or tolerance
     distance = max(1, int(round(tolerance / resolution)))
     indices, _ = find_peaks(values, height=0.05, prominence=0.02, distance=distance)
@@ -183,64 +185,6 @@ def _local_maxima(x: list[float], y: list[float], nucleus: str) -> list[dict[str
         {"shift_ppm": round(ppm, 6), "intensity": round(intensity, 6)}
         for ppm, intensity in sorted(peaks, reverse=True)
     ]
-
-
-def _parse_jcamp_fallback(text: str, nucleus: str) -> dict[str, Any]:
-    headers: dict[str, str] = {}
-    data_lines: list[str] = []
-    mode = ""
-    for raw in text.splitlines():
-        line = raw.strip()
-        if line.startswith("##"):
-            key, _, value = line[2:].partition("=")
-            headers[key.strip().upper()] = value.strip()
-            upper = key.strip().upper()
-            if upper in {"XYDATA", "XYPOINTS", "PEAK TABLE", "PEAKTABLE"}:
-                mode = upper
-            elif upper == "END":
-                mode = ""
-            continue
-        if mode and line and not line.startswith("$$"):
-            data_lines.append(line)
-
-    xfactor = float(headers.get("XFACTOR", "1") or 1)
-    yfactor = float(headers.get("YFACTOR", "1") or 1)
-    x: list[float] = []
-    y: list[float] = []
-    peak_mode = "PEAK" in mode or "PEAK TABLE" in headers or "PEAKTABLE" in headers
-    if peak_mode or "XYPOINTS" in headers:
-        for line in data_lines:
-            values = _numbers(line)
-            for i in range(0, len(values) - 1, 2):
-                x.append(values[i] * xfactor)
-                y.append(values[i + 1] * yfactor)
-    else:
-        delta = float(headers.get("DELTAX", "0") or 0)
-        if not delta:
-            first = float(headers.get("FIRSTX", "0") or 0)
-            last = float(headers.get("LASTX", "0") or 0)
-            npoints = int(float(headers.get("NPOINTS", "0") or 0))
-            delta = (last - first) / (npoints - 1) if npoints > 1 else 1.0
-        for line in data_lines:
-            values = _numbers(line)
-            if len(values) < 2:
-                continue
-            start_x = values[0] * xfactor
-            for offset, value in enumerate(values[1:]):
-                x.append(start_x + offset * delta * xfactor)
-                y.append(value * yfactor)
-
-    x, y = _normalize_trace(x, y)
-    peaks = _local_maxima(x, y, nucleus)
-    if peak_mode and not peaks:
-        peaks = [{"shift_ppm": ppm, "intensity": intensity} for ppm, intensity in zip(x, y)]
-    # Peak-table JCAMP files contain isolated sticks, not a continuous trace.
-    return {
-        "format": "jcamp",
-        "parser": "built-in JCAMP fallback",
-        "peaks": peaks,
-        "trace": {"x": x, "y": y} if x and not peak_mode else None,
-    }
 
 
 def _jcamp_nucleus(data: dict[str, Any], requested: str) -> str:
@@ -289,12 +233,8 @@ def _parse_jcamp(text: str, requested_nucleus: str) -> dict[str, Any]:
             "x_units": x_units,
             "title": data.get("title"),
         }
-    except ImportError:
-        if requested_nucleus == "AUTO":
-            raise ValueError("JCAMP nucleus could not be inferred without the jcamp parser")
-        result = _parse_jcamp_fallback(text, requested_nucleus)
-        result["nucleus"] = requested_nucleus
-        return result
+    except ImportError as exc:
+        raise ValueError("JCAMP import requires the jcamp package: pip install jcamp") from exc
 
 
 def _jdf_nucleus(label: str, requested: str) -> str:

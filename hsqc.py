@@ -2,6 +2,8 @@ from typing import Any
 
 from rdkit import Chem
 
+from multiplicity import CARBON_TOLERANCE, PROTON_TOLERANCE
+
 
 def _shift_map(rows: list[dict[str, Any]], field: str) -> dict[int, float]:
     return {int(row["atom_index"]): float(row[field]) for row in rows if row.get(field) is not None}
@@ -53,8 +55,8 @@ def build_hsqc(prediction: dict[str, Any]) -> dict[str, Any]:
                 item
                 for item in groups
                 if item["c_atom"] == peak["c_atom"]
-                and abs(item["h_ppm"] - peak["h_ppm"]) <= 0.03
-                and abs(item["c_ppm"] - peak["c_ppm"]) <= 0.5
+                and abs(item["h_ppm"] - peak["h_ppm"]) <= PROTON_TOLERANCE
+                and abs(item["c_ppm"] - peak["c_ppm"]) <= CARBON_TOLERANCE
             ),
             None,
         )
